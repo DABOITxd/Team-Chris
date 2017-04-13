@@ -1,0 +1,147 @@
+# Team-Chris
+
+#lang racket
+
+(require 2htdp/image)
+(require 2htdp/universe)
+(require lang/posn)
+(define-struct workspace (in mod tag one two three)#:transparent)
+(define-struct desc (descr n) #:transparent)
+(define-struct bond(type to from strength)#:transparent)
+(define-struct group(name vector)#:transparent)
+
+;explode :  3-char-string -> list of strings 
+(define(explode list)
+  (map(lambda (x) (string x)) (string->list list)))
+;(explode “abc”) (list “a” “b” “c”)
+
+;initialize: string -> alod
+(define(initialize string)
+  (local ((define alos (explode string)))
+  (list->vector  (remove empty (append
+                   (map (lambda(x y) (make-desc (string->symbol x) y)) alos (build-list (length alos) values))
+                   (map (lambda(x) (make-desc 'letter x)) (build-list (length alos) values))
+                      `(,(make-desc 'leftmost 0)
+                        ,(cond
+                          [(=(remainder(length alos)2)0) empty]
+                          [else (make-desc 'middle (floor (/ (length alos) 2)))])
+                        ,(make-desc 'rightmost (-(length alos)1))))))))
+
+;(initialize "abc")
+;(initialize "iijjkk")
+
+;initwp : workspace -> new-workspace with descriptions for each string
+(define(initwp w)
+  (local ((define alov (map (lambda(x) (initialize x)) (list (workspace-in w) (workspace-mod w) (workspace-tag w)))))
+   (make-workspace (workspace-in w) (workspace-mod w) (workspace-tag w) (first alov) (second alov) (third alov))))
+      
+;(initwp (make-workspace "abcde" "abd" "iijjkk" empty empty empty)))
+
+(define workspace0 (initwp (make-workspace "abc" "abd" "iijjkk" empty empty empty)))
+
+;(list "abc" (vector (make-desc 'leftmost 1) (make-desc 'middle 2) (make-desc 'rightmost 3)))
+
+;;takes in a single string and a vector of associated descriptions (any amount) and turns it into a ;;single image
+;img: a string, a vector of descriptions ---> list of individual images
+(define (img str v)
+  (underlay/align "middle" "middle" (rectangle 85 115 'outline (make-color 0 0 0 0))
+     (overlay/align/offset "middle" "bottom" (text str 40 "cornflowerblue") 0 -40
+                          (foldr (λ (x y) (overlay/align/offset "middle" "bottom" x 0 -15 y)) empty-image
+                                 (map (λ (x) (text (symbol->string (desc-descr x)) 20 "cornflowerblue")) (vector->list v))))))
+
+;(img "a"  (vector (make-desc 'leftmost 0) (make-desc 'a 0) (make-desc 'letter 0)))
+
+;(place-image (img "a" (vector (make-desc 'leftmost 0) (make-desc 'a 0) (make-desc 'letter 0))) 100 100 (empty-scene 200 200 'black))
+
+
+;;relevent function to sort-per-num
+(define(extract-descriptions alod num)
+  (cond
+    [(empty? alod) empty]
+    [(=(desc-n (first alod))num)(flatten(list (first alod)(extract-descriptions(rest alod)num)))]
+    [else (extract-descriptions(rest alod)num)]))
+
+;(define ex1 (list(workspace-in workspace0)(workspace-three workspace0)))
+
+
+;sort-per-num: a list (the list containing all the descriptions)  --->  a list of n lists (one list for all the descriptions associated with each letter) so n is how many letters there are
+;presume that ln is sub1 (len string)) the string being "abc" "abd" "iijjkk" for example
+(define (sort-per-num ln d-list)
+  (cond
+    [(= ln -1) empty]
+    [else  (reverse (append (list (extract-descriptions d-list ln)) (reverse (sort-per-num  (sub1 ln) d-list))))]))
+
+
+;(sort-per-num 5 (vector->list (second ex1)))
+
+
+;;here is an image of an arrow that can eventually be used, and modified as needed
+(define arrow (beside (rectangle 10 40 0 "black") (polygon (list
+                                                            (make-posn 0 0) (make-posn -10 20) (make-posn 60 0)
+                                                            (make-posn -10 -20)) 255 "cornflowerblue")))
+
+;(define LLL (list . . .))
+;(define AAA(list LLL LLL (list . . . .)))
+    
+
+
+
+
+;prepare-image : list of images -> places them next to eacherother in an image
+(define (prepare-image l)
+ (cond
+   [(empty? l) empty-image]
+   [else (beside (first l) (prepare-image (rest l)))]))
+    
+;(prepare-image LLL)
+
+;set-scene : list of three lists -> scene
+(define(set-scene aloi)
+  (above(beside (prepare-image(first aloi)) arrow (prepare-image(second aloi)))  (prepare-image(third aloi))))
+
+                  
+
+;(set-scene (list LLL LLL (list . . . .)))
+
+;(map img (explode (workspace-in workspace0)) (map list->vector (sort-per-num 2 (vector->list (workspace-one workspace0)))))
+
+
+
+ ;visualize-workspace: workspace ---> scene
+(define (visualize-workspace w)
+ (local((define img1(list(workspace-in w)(workspace-one w)))
+      (define img2(list(workspace-mod w)(workspace-two w)))
+       (define img3(list(workspace-tag w)(workspace-three w)))
+     (define total-img(list img1 img2 img3)))
+(set-scene
+  (list
+ (map img (explode (first img1)) (map list->vector (sort-per-num (sub1 (length (explode (first img1)))) (vector->list (second img1)))))
+ (map img (explode (first img2)) (map list->vector (sort-per-num (sub1 (length (explode (first img2)))) (vector->list (second img2)))))
+ (map img (explode (first img3)) (map list->vector (sort-per-num (sub1 (length (explode (first img3)))) (vector->list (second img3)))))))))
+    
+
+
+
+
+ (visualize-workspace workspace0)
+
+
+
+;draw-bond : img img workspace -> img
+;;IMPORTANT: distance between two is about 87.5
+(define(draw-bond img img1 )
+   (add-curve
+      (beside img img1)
+     42.5 15 60 1/2
+     125 15 -60 1/2
+     "cornflowerblue"))
+   
+
+(draw-bond (img "a" (vector (make-desc 'leftmost 0) (make-desc 'letter 0) (make-desc 'a 0)))
+         (img "a" (vector (make-desc 'leftmost 0) (make-desc 'letter 0) (make-desc 'a 0)))) 
+
+
+
+                    
+
+
