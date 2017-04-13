@@ -1,14 +1,21 @@
-# Team-Chris
-
 #lang racket
 
 (require 2htdp/image)
 (require 2htdp/universe)
 (require lang/posn)
-(define-struct workspace (in mod tag one two three)#:transparent)
+(define-struct workspace (in mod tag one two three bcg)#:transparent)
 (define-struct desc (descr n) #:transparent)
-(define-struct bond(type to from strength)#:transparent)
-(define-struct group(name vector)#:transparent)
+(define-struct bond (type to from strength) #:transparent)
+(define-struct group (descriptor type elements) #:transparent) ;where descriptor is a symbol  
+(define-struct pdesc (desc boolean) #:transparent)
+(define-struct pbond (bond boolean) #:transparent)
+
+
+  
+
+;bonds groups correspondences- example workspaces
+
+
 
 ;explode :  3-char-string -> list of strings 
 (define(explode list)
@@ -27,24 +34,33 @@
                           [else (make-desc 'middle (floor (/ (length alos) 2)))])
                         ,(make-desc 'rightmost (-(length alos)1))))))))
 
-;(initialize "abc")
+(initialize "abc")
 ;(initialize "iijjkk")
+
+
+
+
+;(make-description 'a leftmost 0) (make-description 'b middle 1)  
+
 
 ;initwp : workspace -> new-workspace with descriptions for each string
 (define(initwp w)
   (local ((define alov (map (lambda(x) (initialize x)) (list (workspace-in w) (workspace-mod w) (workspace-tag w)))))
-   (make-workspace (workspace-in w) (workspace-mod w) (workspace-tag w) (first alov) (second alov) (third alov))))
+   (make-workspace (workspace-in w) (workspace-mod w) (workspace-tag w) (first alov) (second alov) (third alov) (workspace-bcg w))))
       
 ;(initwp (make-workspace "abcde" "abd" "iijjkk" empty empty empty)))
 
-(define workspace0 (initwp (make-workspace "abc" "abd" "iijjkk" empty empty empty)))
+(define workspace0 (initwp (make-workspace "abc" "abd" "iijjkk" empty empty empty (vector (make-bond "successor" 'a 'b 1) (make-bond "succesor" 'b 'c 1) ))))
 
+;(define-struct bond (type to from strength)
+
+                           
 ;(list "abc" (vector (make-desc 'leftmost 1) (make-desc 'middle 2) (make-desc 'rightmost 3)))
 
 ;;takes in a single string and a vector of associated descriptions (any amount) and turns it into a ;;single image
 ;img: a string, a vector of descriptions ---> list of individual images
 (define (img str v)
-  (underlay/align "middle" "middle" (rectangle 85 115 'outline (make-color 0 0 0 0))
+    (underlay/align "middle" "middle" (rectangle 85 115 'outline (make-color 0 0 0 0))
      (overlay/align/offset "middle" "bottom" (text str 40 "cornflowerblue") 0 -40
                           (foldr (λ (x y) (overlay/align/offset "middle" "bottom" x 0 -15 y)) empty-image
                                  (map (λ (x) (text (symbol->string (desc-descr x)) 20 "cornflowerblue")) (vector->list v))))))
@@ -75,13 +91,27 @@
 ;(sort-per-num 5 (vector->list (second ex1)))
 
 
+
+;draw-bond : img img -> img
+
+
+;draw-group : img -> 
+
+
 ;;here is an image of an arrow that can eventually be used, and modified as needed
 (define arrow (beside (rectangle 10 40 0 "black") (polygon (list
                                                             (make-posn 0 0) (make-posn -10 20) (make-posn 60 0)
                                                             (make-posn -10 -20)) 255 "cornflowerblue")))
 
-;(define LLL (list . . .))
-;(define AAA(list LLL LLL (list . . . .)))
+
+
+
+
+
+
+
+(define LLL (list . . .))
+(define AAA(list LLL LLL (list . . . .)))
     
 
 
@@ -121,9 +151,9 @@
     
 
 
+(map img (explode (workspace-in workspace0)) (map list->vector (sort-per-num (sub1 (length (explode (workspace-in workspace0)))) (vector->list (workspace-one workspace0)))))
 
-
- (visualize-workspace workspace0)
+ (visualize-workspace workspace0)   
 
 
 
@@ -141,7 +171,9 @@
          (img "a" (vector (make-desc 'leftmost 0) (make-desc 'letter 0) (make-desc 'a 0)))) 
 
 
+ 
+;draw-group : img -> img ;just use frame (default racket function)
 
-                    
+  
 
 
